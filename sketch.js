@@ -1,46 +1,53 @@
 let can; let canw = 400; let canh = 400;
 let tileW = 20, tileH = 20;
 
-let field, parts
+let field, parts, nRows, nCols
 let tiles = {}
 function setup() {
     can = createCanvas(canh, canw)
     frameRate(60)
-    field = genFlowField(canw, canh, tileW, tileH)
+    field = genFlowField(canw, canh, tileW, tileH, zoff)
     let nParts = 100
     parts = genParts(nParts)
-    print(parts)
 }
 
 let inc = 0.1
-function genFlowField(mapw, maph, tw, th) {
-    let nRows = floor(maph / th);
-    let nCols = floor(mapw / tw);
+let zoff = 0
+function genFlowField(mapw, maph, tw, th, zoff) {
+    nRows = floor(maph / th);
+    nCols = floor(mapw / tw);
     let nTiles = nRows * nCols;
     let result = new Array(nTiles);
     let yoff = 0
     for (let r = 0; r < nRows; r++) {
         let xoff = 0 
         for (let c = 0; c<nCols; c++){
-            let ang = noise(yoff, xoff) * TWO_PI;
+            let ang = noise(yoff, xoff, zoff) * TWO_PI * 4;  // * 4 iot not have it clump in one direction
             xoff += inc
             let dir = p5.Vector.fromAngle(ang)
-            result[r * nCols + c] = noise(r,c,0)
+            dir.setMag(1) // universalize mag
+            // noise(r,c,0)
+            result[r * nCols + c] = dir
             push()
             translate(c * tw, r * th)
             rotate(dir.heading()); // "heading" in a dir
             stroke(0)
-            line(0, 0, 15, 0)
+            // line(0, 0, 15, 0)
             pop()
         }
         yoff += inc
+        zoff += 0.0001;  // affects overall change of flow field
     }
     return result;
 }
 
 function draw() {
+    field = genFlowField(canw, canh, tileW, tileH, zoff)
     for(part of parts) {
-        part.applyForce(random(0, 10))
+        part.followField(field, tileW, tileH, nCols)
+        // part.applyForce(random(0, 10))
+        part.handleWrap(canw, canh)
+        part.update()
         part.show()
     }
 }
@@ -60,19 +67,38 @@ function Particle() {
     )
     this.vel = createVector(0,0)
     this.acc = createVector(0,0)
+    this.maxspeed = 4
 
     this.update = function() {
         this.vel.add(this.acc)
+        this.vel.limit(this.maxspeed)  // iot to stop it from building too much speed
         this.pos.add(this.vel)
         this.acc.mult(0)
     }
 
     this.size = 10;
     this.show = function() {
-        ellipse(this.pos.x, this.pos.y, this.size, this.size)
+        stroke(0, 4)
+        strokeWeight(4)
+        point(this.pos.x, this.pos.y)
+    }
+
+    this.followField = function(field, tileW, tileH, nCols) {
+        let x = Math.floor(this.pos.x / tileW);
+        let y = Math.floor(this.pos.y / tileH);
+        let acc = field[y * nCols + x];
+        
+        this.applyForce(acc)
     }
 
     this.applyForce = function(force) {
         this.acc.add(force)
+    }
+
+    this.handleWrap = function(canw, canh) {
+        this.pos.x %= canw
+        this.pos.y %= canh
+        this.pos.x = this.pos.x < 0 ? canw : this.pos.x;
+        this.pos.y = this.pos.y < 0 ? canh : this.pos.y;
     }
 }
