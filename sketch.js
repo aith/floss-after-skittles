@@ -36,13 +36,15 @@ function genFlowField(mapw, maph, tw, th, zoff) {
             pop()
         }
         yoff += inc
-        zoff += 0.0001;  // affects overall change of flow field
+        zoff += 0.1;  // affects overall change of flow field
     }
     return result;
 }
 
 function draw() {
     field = genFlowField(canw, canh, tileW, tileH, zoff)
+    let zoff_inc = 0.0005
+    zoff += zoff_inc
     for(part of parts) {
         part.followField(field, tileW, tileH, nCols)
         // part.applyForce(random(0, 10))
@@ -96,9 +98,9 @@ function Particle() {
     }
 
     this.handleWrap = function(canw, canh) {
-        this.pos.x %= canw
-        this.pos.y %= canh
-        this.pos.x = this.pos.x < 0 ? canw : this.pos.x;
-        this.pos.y = this.pos.y < 0 ? canh : this.pos.y;
+        this.pos.x %= canw+1
+        this.pos.y %= canh+1
+        this.pos.x = this.pos.x < 0 ? canw-5 : this.pos.x;
+        this.pos.y = this.pos.y < 0 ? canh-5 : this.pos.y;
     }
 }
