@@ -1,4 +1,4 @@
-let can; let canw = 400; let canh = 400;
+let can; let canw = 800; let canh = 800;
 let tileW = 20, tileH = 20;
 
 let field, parts, nRows, nCols
@@ -6,14 +6,14 @@ let tiles = {}
 function setup() {
     can = createCanvas(canh, canw)
     frameRate(60)
-    field = genFlowField(canw, canh, tileW, tileH, zoff)
-    let nParts = 100
+    let nParts = 200
     parts = genParts(nParts)
+    background("#f7f5f1")
 }
 
 let inc = 0.1
 let zoff = 0
-function genFlowField(mapw, maph, tw, th, zoff) {
+function genFlowField(mapw, maph, tw, th, zoff, z_inc) {
     nRows = floor(maph / th);
     nCols = floor(mapw / tw);
     let nTiles = nRows * nCols;
@@ -25,7 +25,7 @@ function genFlowField(mapw, maph, tw, th, zoff) {
             let ang = noise(yoff, xoff, zoff) * TWO_PI * 4;  // * 4 iot not have it clump in one direction
             xoff += inc
             let dir = p5.Vector.fromAngle(ang)
-            dir.setMag(1) // universalize mag
+            dir.setMag(0.6) // universalize mag, change flow monality
             // noise(r,c,0)
             result[r * nCols + c] = dir
             push()
@@ -36,15 +36,15 @@ function genFlowField(mapw, maph, tw, th, zoff) {
             pop()
         }
         yoff += inc
-        zoff += 0.1;  // affects overall change of flow field
+        zoff += z_inc
     }
     return result;
 }
 
 function draw() {
-    field = genFlowField(canw, canh, tileW, tileH, zoff)
-    let zoff_inc = 0.0005
-    zoff += zoff_inc
+    let zinc = 0.0005
+    field = genFlowField(canw, canh, tileW, tileH, zoff, zinc)
+    zoff += zinc
     for(part of parts) {
         part.followField(field, tileW, tileH, nCols)
         // part.applyForce(random(0, 10))
@@ -69,7 +69,8 @@ function Particle() {
     )
     this.vel = createVector(0,0)
     this.acc = createVector(0,0)
-    this.maxspeed = 4
+    this.color = doColor(0,0,0,random(0,1), 0);
+    this.maxspeed = 3
 
     this.update = function() {
         this.vel.add(this.acc)
@@ -80,9 +81,11 @@ function Particle() {
 
     this.size = 10;
     this.show = function() {
-        stroke(0, 4)
-        strokeWeight(4)
-        point(this.pos.x, this.pos.y)
+        // stroke(0, 4)
+        let c = this.color
+        stroke(c[0], c[1], c[2], 34)
+        // strokeWeight(4)
+        ellipse(this.pos.x, this.pos.y, 1, 1)
     }
 
     this.followField = function(field, tileW, tileH, nCols) {
@@ -98,9 +101,42 @@ function Particle() {
     }
 
     this.handleWrap = function(canw, canh) {
-        this.pos.x %= canw+1
-        this.pos.y %= canh+1
-        this.pos.x = this.pos.x < 0 ? canw-5 : this.pos.x;
-        this.pos.y = this.pos.y < 0 ? canh-5 : this.pos.y;
+        if (this.pos.x > canw) {
+            this.pos.x = 0;
+        }
+        if (this.pos.x < 0) {
+            this.pos.x = canw;
+        }
+        if (this.pos.y > canh) {
+            this.pos.y = 0;
+        }
+        if (this.pos.y < 0) {
+            this.pos.y = canh;
+        }
     }
 }
+
+let index = 0.5 // 0  to 1 === t
+// trying out inigo quillez' procedural color palette
+function doColor(a, b, c, t, d) {
+    a = [0.5,0.5,0.5]
+    b = [0.5,0.5,0.5]
+    c = [1,1,1]
+    let first = [a[0], a[1], a[2]]
+    let d2 = random(0.33, 0.33)
+    let d3 = random(d2, 0.67)
+    d = [0, d2, d3]
+    let second = [
+        b[0]*cos((2*PI*(c[0]*t+d[0]))),
+        b[1]*cos((2*PI*(c[1]*t+d[1]))),
+        b[2]*cos((2*PI*(c[2]*t+d[2])))
+    ]
+                 
+    let result = [
+        (first[0] + second[0]) * 255,
+        (first[1] + second[1]) * 255,
+        (first[2] + second[2]) * 255
+    ]
+    return result
+}
+
